@@ -18,6 +18,7 @@ Success criterion (from the lab spec):
   reports the result — all in one agentic loop.
 """
 
+import os
 import subprocess
 import sys
 
@@ -75,5 +76,34 @@ def exec_python(path: str, timeout: int = 10) -> str:
     Timeout : "Error: script 'loop.py' exceeded timeout of 2s and was killed."
     Crash   : "Error (exit code 1):\\nTraceback (most recent call last):\\n  ..."
     """
-    # TODO: implement exec_python
-    raise NotImplementedError("Implement exec_python in tools/code_executor.py")
+    try:
+        effective_timeout = min(timeout, MAX_TIMEOUT)
+
+        if not path or not os.path.isfile(path):
+            return f"Error: script '{path}' does not exist or is not a file."
+
+        result = subprocess.run(
+            [sys.executable, path],
+            capture_output=True,
+            text=True,
+            timeout=effective_timeout,
+        )
+
+        if result.returncode != 0:
+            return _truncate(f"Error (exit code {result.returncode}):\n{result.stderr}")
+
+        # An empty string would read like a failure to the agent
+        if not result.stdout:
+            return "Script ran successfully with no output."
+        return _truncate(result.stdout)
+
+    except subprocess.TimeoutExpired as e:
+        return f"Error: script '{path}' exceeded timeout of {e.timeout}s and was killed."
+    except Exception as e:
+        return f"Error executing script '{path}': {e}"
+
+
+def _truncate(output: str) -> str:
+    if len(output) > MAX_OUTPUT_CHARS:
+        output = output[:MAX_OUTPUT_CHARS] + "\n[output truncated]"
+    return output

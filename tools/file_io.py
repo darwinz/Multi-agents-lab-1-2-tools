@@ -50,8 +50,18 @@ def read_file(path: str) -> str:
     Success : "def word_count(text):\n    ..."
     Failure : "Error reading file '/src/utils.py': No such file or directory."
     """
-    # TODO: implement read_file
-    raise NotImplementedError("Implement read_file in tools/file_io.py")
+    abs_path = os.path.abspath(path)
+    try:
+        with open(abs_path, "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return f"Error reading file '{abs_path}': No such file or directory."
+    except IsADirectoryError:
+        return f"Error reading file '{abs_path}': Path is a directory, not a file."
+    except PermissionError:
+        return f"Error reading file '{abs_path}': Permission denied."
+    except Exception as e:
+        return f"Error reading file '{abs_path}': {e}"
 
 
 def write_file(path: str, content: str) -> str:
@@ -90,5 +100,15 @@ def write_file(path: str, content: str) -> str:
     Success : "File written successfully. 12 lines."
     Failure : "Error writing file '/read-only/file.py': Permission denied."
     """
-    # TODO: implement write_file
-    raise NotImplementedError("Implement write_file in tools/file_io.py")
+    try:
+        parent = os.path.dirname(path)
+        # dirname is '' for bare filenames like "script.py"
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return f"File written successfully. {len(content.splitlines())} lines."
+    except PermissionError:
+        return f"Error writing file '{path}': Permission denied."
+    except Exception as e:
+        return f"Error writing file '{path}': {e}"
